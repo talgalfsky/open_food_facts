@@ -35,4 +35,4 @@ However if we require updates at 15 minutes intervals for a DataSet of ~2M rows,
 While working on the task, I loaded the bulk CSV file to GS Bucket and then ingested it to a table in BigQuery.
 During Exploratory Data Analysis (EDA) I used the SQL queries in `SQL\eda.sql` to clean up the data and create some auxiliary tables.
 
-This [Data Studio Dashboard] (https://datastudio.google.com/s/uWBGaQNs5iY) is intended to answer the questions in the exercise
+This [Data Studio Dashboard](https://datastudio.google.com/s/uWBGaQNs5iY) is intended to answer the questions in the exercise
