@@ -8,7 +8,7 @@
 This approach uses an `initial` pipeline to load the bulk data into a DataBase. After the initial load is completed. Only the `incremental` pipeline needs to run at a scheduled interval. The scheduling is orchestrated by Apache Airflow. Each task runs in a Kubernetes container which can be configured to support any platform (Google, AWS, other...).
 
 ### SQL transforms
-![SQL Transforms](https://github.com/talgalfsky/open_food_facts/blob/master/images/open_food_data_elt_with_airflow.jpeg?raw=true)
+![image](https://github.com/talgalfsky/open_food_facts/blob/main/images/Open%20Food%20Facts%20diagrams%20-%20BQ%20SQL%20Transform.jpeg)
 
 ### Bulk and Stream
 Initial ingest can is done in bulk from a [CSV file](https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv) containing the entire DB. The CSV file is updated daily.
