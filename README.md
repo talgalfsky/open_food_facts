@@ -25,8 +25,11 @@ This call will capture the last 100 changes made to the data sorted by descendin
 
 ### Option 2: GCP based solution
 When going with a platform specific solution, for Google Cloud Platform, a pipeline can be designed using DataFlow to handle bulk vs. stream operations.
-![GCP Pipeline](https://github.com/talgalfsky/open_food_facts/blob/master/images/open_food_data_elt_with_airflow.jpeg?raw=true)
-For the specific case of Open Food 
+![image](https://github.com/talgalfsky/open_food_facts/blob/main/images/Open%20Food%20Facts%20diagrams%20-%20gcp_option.jpeg)
+For the specific case of Open Food Facts, using DataFlow might be an overkill but it is an option.
+The main advantage of DataFlow is scalability and the ability to do the same transformations on bulk and stream data before dumping it to the data sink.
+It is intended for very large data or very quick transformations.
+However if we require updates at 15 minutes intervals for a DataSet of ~2M rows, all the transformations can be done in BigQuery after the bulk and incremental sets are loaded. The advantage in doing that is that SQL transforms are easier for a wider variety of programmers to work with than Apache Beam transforms.
 
 ## Dashboard and EDA SQL
 While working on the task, I loaded the bulk CSV file to GS Bucket and then ingested it to a table in BigQuery.
