@@ -3,7 +3,7 @@
 ## Design Diagrams
 
 ### Airflow pipelines
-![image](https://github.com/talgalfsky/open_food_facts/blob/master/images/open_food_data_elt_with_airflow.jpeg?raw=true)
+![image](https://github.com/talgalfsky/open_food_facts/blob/main/images/open_food_data_elt_with_airflow.jpeg)
 
 This approach uses an `initial` pipeline to load the bulk data into a DataBase. After the initial load is completed. Only the `incremental` pipeline needs to run at a scheduled interval. The scheduling is orchestrated by Apache Airflow. Each task runs in a Kubernetes container which can be configured to support any platform (Google, AWS, other...).
 
