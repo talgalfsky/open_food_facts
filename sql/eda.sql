@@ -1,21 +1,21 @@
 -- Ensure "code" column is PK
-CREATE OR REPLACE TABLE `open_food_facts_deduped` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_deduped AS
 WITH dedup AS (
-select code, ARRAY_AGG(last_modified_t ORDER BY last_modified_t DESC)[OFFSET(0)] as last_modified_t, ARRAY_AGG(food_groups ORDER BY food_groups DESC)[OFFSET(0)] as food_groups
-from `open_food_facts_raw_csv`
-group by code)
+SELECT code, ARRAY_AGG(last_modified_t ORDER BY last_modified_t DESC)[OFFSET(0)] as last_modified_t, ARRAY_AGG(food_groups ORDER BY food_groups DESC)[OFFSET(0)] AS food_groups
+FROM open_food_facts.open_food_facts_raw_csv
+GROUP BY code)
 
-select DISTINCT a.*  
-from `open_food_facts_raw_csv` AS a
+SELECT DISTINCT a.*  
+FROM open_food_factsopen_food_facts_raw_csv AS a
 JOIN dedup
 USING (code,last_modified_t,food_groups);
 
 
 
 -- create ingredients flattened table
-CREATE OR REPLACE TABLE `open_food_facts_english_ingredients` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_english_ingredients AS
 SELECT code, LOWER(TRIM(REGEXP_REPLACE(REGEXP_EXTRACT(flattened_ingredients, r'^.*\(|.*'),r'[^a-zA-Z0-9\s]',r''))) AS ingredient
-FROM `open_food_facts_deduped`
+FROM open_food_facts.open_food_facts_deduped
 CROSS JOIN UNNEST(SPLIT(ingredients_text) ) AS flattened_ingredients
 WHERE flattened_ingredients IS NOT NULL 
 AND flattened_ingredients <> ''
@@ -25,7 +25,7 @@ ORDER BY code;
 
 
 -- create allergens flattened table
-CREATE OR REPLACE TABLE `open_food_facts_allergens_flattened` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_allergens_flattened AS
 SELECT code, flattened_allergens
 FROM `open_food_facts_deduped`
 CROSS JOIN UNNEST(SPLIT(allergens)) AS flattened_allergens
@@ -34,18 +34,18 @@ ORDER BY code;
 
 
 -- create allergens in english table
-CREATE OR REPLACE TABLE `open_food_facts_english_allergens` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_english_allergens AS
 SELECT *, LOWER(REGEXP_EXTRACT(flattened_allergens, r'^en:(.*)')) AS en_allergens
-FROM `open_food_facts_allergens_flattened`
+FROM open_food_facts.open_food_facts_allergens_flattened
 WHERE REGEXP_EXTRACT(flattened_allergens, r'^en:(.*)') IS NOT NULL
 AND flattened_allergens <> "en:none";
 
 
 -- update allergens table
-CREATE OR REPLACE TABLE `open_food_facts_allergens_updated` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_allergens_updated AS
 SELECT code, en_allergens AS allergens
 FROM
-`open_food_facts_english_allergens`
+open_food_facts.open_food_facts_english_allergens
 UNION DISTINCT
 SELECT * FROM (
 SELECT code,
@@ -65,9 +65,9 @@ CASE
   ELSE ''
   END AS allergens
 FROM
-`open_food_facts_english_ingredients`
+open_food_facts.open_food_facts_english_ingredients
 LEFT JOIN
-`open_food_facts_english_allergens` AS b
+open_food_facts.open_food_facts_english_allergens AS b
 USING (code) 
 WHERE b.code IS NULL)
 ;
@@ -75,24 +75,24 @@ WHERE b.code IS NULL)
 
 
 -- allergens cleaned and grouped
-CREATE OR REPLACE TABLE `open_food_facts_english_agg_allergens` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_english_agg_allergens AS
 SELECT code, STRING_AGG((INITCAP(allergens)),', ') AS allergens
-FROM `open_food_facts_allergens_updated`
+FROM open_food_facts.open_food_facts_allergens_updated
 WHERE allergens <> ''
 GROUP BY code;
 
 
 -- Look at MOST COMMON ALLERGENS
 SELECT allergens, count(*) as cnt
-from
-`open_food_facts_allergens_updated`
-group by allergens
-order by cnt desc;
+FROM
+open_food_facts.open_food_facts_allergens_updated
+GROUP BY allergens
+ORDER BY cnt DESC;
 
 
 
 -- create english foods table
-CREATE OR REPLACE TABLE `open_food_facts_foods` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_foods AS
 SELECT DISTINCT code, url, product_name, generic_name, ROUND(energy_kcal_100g,1) AS energy_kcal_100g,
 ROUND(energy_from_fat_100g,1) AS energy_from_fat_100g,
 ROUND(fat_100g,1) AS fat_100g, saturated_fat_100g, monounsaturated_fat_100g, polyunsaturated_fat_100g, omega_3_fat_100g, omega_9_fat_100g, trans_fat_100g,
@@ -110,9 +110,9 @@ main_category_en AS category,
 ingredients_text AS ingredients,
 allergens.allergens 
 FROM
-`open_food_facts_deduped`
+open_food_facts.open_food_facts_deduped
 LEFT JOIN
- `open_food_facts_english_agg_allergens` AS allergens
+ open_food_facts.open_food_facts_english_agg_allergens AS allergens
 USING (code)
 WHERE (LOWER(countries_en) LIKE ('%united%') OR LOWER(countries_en) LIKE ('%australia%'))
 AND (alcohol_100g < 1 OR alcohol_100g IS NULL)
@@ -122,29 +122,29 @@ AND energy_kcal_100g > (proteins_100g*3.8 + fat_100g*8 + carbohydrates_100g*3.8)
 
 
 -- DEDUPE ON PRODUCT NAME (these are actually different products but it makes things easier for the dashboard)
-CREATE OR REPLACE TABLE `multiname_dedup_on_allergens` AS
+CREATE OR REPLACE TABLE open_food_facts.multiname_dedup_on_allergens AS
 SELECT 
 product_name, 
 ARRAY_AGG(allergens ORDER BY LENGTH(allergens) DESC)[offset(0)] AS allergens,
 ARRAY_AGG(code ORDER BY LENGTH(allergens) DESC)[offset(0)] AS code,
-from 
-`open_food_facts_foods`
-group by product_name;
+FROM 
+open_food_facts.open_food_facts_foods
+GROUP BY product_name;
 
 
 -- REMOVE DUPLICATE NAMES FROM MAIN TABLE
-CREATE OR REPLACE TABLE `open_food_facts_foods` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_foods AS
 SELECT a.* except(allergens), a.allergens AS allergen_list FROM
-`open_food_facts_foods` AS a
+open_food_facts.open_food_facts_foods AS a
 JOIN
-`multiname_dedup_on_allergens`
+open_food_facts.multiname_dedup_on_allergens
 USING(code);
 
 
 -- useful for dashboard
-CREATE OR REPLACE TABLE `open_food_facts_only_allergens` AS
+CREATE OR REPLACE TABLE open_food_facts.open_food_facts_only_allergens AS
 SELECT allergens, code
 FROM
-`open_food_facts_allergens_updated`
+open_food_facts.open_food_facts_allergens_updated
 WHERE allergens <> '';
 
